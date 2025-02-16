@@ -1,0 +1,772 @@
+<html><head><base href="https://">
+<style>
+:root {
+  --primary: #2b87d1;
+  --secondary: #34495e;
+}
+
+body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-height: 100vh;
+  margin: 0;
+  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+}
+
+.game-container {
+  background: white;
+  border-radius: 15px;
+  padding: 2rem;
+  box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+  margin: 2rem;
+  max-width: 600px;
+  width: 90%;
+}
+
+.word-display {
+  font-size: 2rem;
+  color: var(--primary);
+  text-align: center;
+  margin: 1rem 0;
+  min-height: 3rem;
+}
+
+.question {
+  font-size: 1.2rem;
+  color: var(--secondary);
+  text-align: center;
+  margin: 1rem 0;
+  min-height: 4rem;
+}
+
+.answer-input {
+  display: block;
+  width: 100%;
+  padding: 1rem;
+  font-size: 1.1rem;
+  border: 2px solid var(--primary);
+  border-radius: 8px;
+  margin: 1rem 0;
+  text-align: center;
+}
+
+.button-container {
+  display: flex;
+  gap: 1rem;
+  width: 100%;
+}
+
+button {
+  width: 100%;
+  padding: 1rem;
+  font-size: 1.1rem;
+  border: none;
+  border-radius: 8px;
+  background: var(--primary);
+  color: white;
+  cursor: pointer;
+  transition: transform 0.2s, background 0.2s;
+}
+
+button:hover {
+  transform: translateY(-2px);
+  background: #1a6cb3;
+}
+
+button.skip {
+  background: var(--secondary);
+}
+
+button.skip:hover {
+  background: #2c3e50;
+}
+
+.new-challenge {
+  margin-top: 1rem;
+  background: #27ae60 !important; /* Green color to differentiate it */
+}
+
+.new-challenge:hover {
+  background: #219a52 !important;
+}
+
+.score {
+  font-size: 1.2rem;
+  color: var(--secondary);
+  text-align: center;
+}
+
+.feedback {
+  text-align: center;
+  min-height: 2rem;
+  margin-top: 1rem;
+  font-weight: bold;
+}
+
+.correct { color: #27ae60; }
+.incorrect { color: #e74c3c; }
+
+.celebration-modal {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0,0,0,0.8);
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.celebration-content {
+  background: white;
+  padding: 2rem;
+  border-radius: 15px;
+  text-align: center;
+}
+
+.celebration-content img {
+  max-width: 200px;
+  margin: 1rem 0;
+}
+</style>
+</head>
+<body>
+<div class="game-container">
+  <h1>Word Family Challenge</h1>
+  <h2>(anti-, auto- down-, up-, extra-, hyper-, over-)</h2>
+  <p class="subtitle">Complete this challenge successfully and earn a Pokemon!</p>
+  <div class="score">Score: <span id="score">0</span></div>
+  <div class="word-display" id="word"></div>
+  <div class="question" id="question"></div>
+  <input type="text" class="answer-input" id="answer" placeholder="Type your answer here">
+  <div class="button-container">
+    <button onclick="checkAnswer()">Submit Answer</button>
+    <button onclick="skipWord()" class="skip">Skip this word</button>
+  </div>
+  <button onclick="startNewChallenge()" class="new-challenge">Start a New Challenge</button>
+  <div class="feedback" id="feedback"></div>
+</div>
+
+<div class="celebration-modal" id="celebrationModal">
+  <div class="celebration-content">
+    <h2>Congratulations!</h2>
+    <p>You've correctly answered 10 questions! You've won this Pokemon!</p>
+    <div id="pokemonImage"></div>
+    <button onclick="closeCelebration()">Continue Playing</button>
+  </div>
+</div>
+
+<script>
+const wordFamilies = [
+  {
+    "baseWord": "virus",
+    "question": "What noun is formed by adding a prefix to the word 'virus' to mean something that prevents infection?",
+    "correct": ["antivirus"]
+  },
+  {
+    "baseWord": "social",
+    "question": "What adjective is formed by adding a prefix to the word 'social' to mean opposed to social behavior?",
+    "correct": ["antisocial"]
+  },
+  {
+    "baseWord": "body",
+    "question": "What noun is formed by adding a prefix to the word 'body' to mean something that fights harmful substances in the body?",
+    "correct": ["antibody"]
+  },
+  {
+    "baseWord": "inflammatory",
+    "question": "What adjective is formed by adding a prefix to the word 'inflammatory' to mean preventing inflammation?",
+    "correct": ["anti-inflammatory"]
+  },
+  {
+    "baseWord": "hero",
+    "question": "What noun is formed by adding a prefix to the word 'hero' to mean a person who is opposed to heroes or heroism?",
+    "correct": ["antihero"]
+  },
+  {
+    "baseWord": "war",
+    "question": "What noun is formed by adding a prefix to the word 'war' to mean opposition to war?",
+    "correct": ["antiwar"]
+  },
+  {
+    "baseWord": "drug",
+    "question": "What noun is formed by adding a prefix to the word 'drug' to mean something that prevents or counters drugs?",
+    "correct": ["antidrug"]
+  },
+  {
+    "baseWord": "bacterial",
+    "question": "What adjective is formed by adding a prefix to the word 'bacterial' to mean preventing bacterial growth?",
+    "correct": ["antibacterial"]
+  },
+  {
+    "baseWord": "theft",
+    "question": "What noun is formed by adding a prefix to the word 'theft' to mean opposition to theft?",
+    "correct": ["antitheft"]
+  },
+  {
+    "baseWord": "aging",
+    "question": "What adjective is formed by adding a prefix to the word 'aging' to mean opposing the effects of aging?",
+    "correct": ["anti-aging"]
+  },
+  {
+    "baseWord": "feminism",
+    "question": "What noun is formed by adding a prefix to the word 'feminism' to mean opposition to feminism?",
+    "correct": ["antifeminism"]
+  },
+  {
+    "baseWord": "capitalist",
+    "question": "What noun is formed by adding a prefix to the word 'capitalist' to mean opposition to capitalism?",
+    "correct": ["anticapitalist"]
+  },
+  {
+    "baseWord": "racism",
+    "question": "What noun is formed by adding a prefix to the word 'racism' to mean opposition to racism?",
+    "correct": ["antiracism"]
+  },
+  {
+    "baseWord": "slavery",
+    "question": "What noun is formed by adding a prefix to the word 'slavery' to mean opposition to slavery?",
+    "correct": ["antislavery"]
+  },
+  {
+    "baseWord": "globalization",
+    "question": "What noun is formed by adding a prefix to the word 'globalization' to mean opposition to globalization?",
+    "correct": ["antiglobalization"]
+  },
+  {
+    "baseWord": "monopoly",
+    "question": "What noun is formed by adding a prefix to the word 'monopoly' to mean opposition to monopoly?",
+    "correct": ["antimonopoly"]
+  },
+  {
+    "baseWord": "socialism",
+    "question": "What noun is formed by adding a prefix to the word 'socialism' to mean opposition to socialism?",
+    "correct": ["antisocialism"]
+  },
+  {
+    "baseWord": "establishment",
+    "question": "What noun is formed by adding a prefix to the word 'establishment' to mean opposition to the established system?",
+    "correct": ["anti-establishment"]
+  },
+  {
+    "baseWord": "pollution",
+    "question": "What noun is formed by adding a prefix to the word 'pollution' to mean opposition to pollution?",
+    "correct": ["antipollution"]
+  },
+  {
+    "baseWord": "tyranny",
+    "question": "What noun is formed by adding a prefix to the word 'tyranny' to mean opposition to tyranny?",
+    "correct": ["antityranny"]
+  },
+  {
+    "baseWord": "imperialism",
+    "question": "What noun is formed by adding a prefix to the word 'imperialism' to mean opposition to imperialism?",
+    "correct": ["antiimperialism"]
+  },
+  {
+    "baseWord": "constitutional",
+    "question": "What adjective is formed by adding a prefix to the word 'constitutional' to mean opposition to the constitution?",
+    "correct": ["anticomstitutional"]
+  },
+  {
+    "baseWord": "corruption",
+    "question": "What noun is formed by adding a prefix to the word 'corruption' to mean opposition to corruption?",
+    "correct": ["anticorruption"]
+  },
+  {
+    "baseWord": "nationalism",
+    "question": "What noun is formed by adding a prefix to the word 'nationalism' to mean opposition to nationalism?",
+    "correct": ["antinationalism"]
+  },
+  {
+    "baseWord": "humanism",
+    "question": "What noun is formed by adding a prefix to the word 'humanism' to mean opposition to humanism?",
+    "correct": ["antihumanism"]
+  },
+  {
+    "baseWord": "communism",
+    "question": "What noun is formed by adding a prefix to the word 'communism' to mean opposition to communism?",
+    "correct": ["anticommunism"]
+  },
+  {
+    "baseWord": "deforestation",
+    "question": "What noun is formed by adding a prefix to the word 'deforestation' to mean opposition to deforestation?",
+    "correct": ["antideforestation"]
+  },
+  {
+    "baseWord": "semitism",
+    "question": "What noun is formed by adding a prefix to the word 'semitism' to mean opposition to anti-Semitism?",
+    "correct": ["antisemitism"]
+  },
+  {
+    "baseWord": "terrorism",
+    "question": "What noun is formed by adding a prefix to the word 'terrorism' to mean opposition to terrorism?",
+    "correct": ["antiterrorism"]
+  },
+  {
+    "baseWord": "monarchy",
+    "question": "What noun is formed by adding a prefix to the word 'monarchy' to mean opposition to monarchy?",
+    "correct": ["antimonarchy"]
+  },
+  {
+    "baseWord": "capitalism",
+    "question": "What noun is formed by adding a prefix to the word 'capitalism' to mean opposition to capitalism?",
+    "correct": ["anticapitalism"]
+  },
+  {
+    "baseWord": "free",
+    "question": "What adjective is formed by adding a prefix to the word 'free' to mean not free or restricted?",
+    "correct": ["antifree"]
+  },
+  {
+    "baseWord": "vaccination",
+    "question": "What noun is formed by adding a prefix to the word 'vaccination' to mean opposition to vaccination?",
+    "correct": ["antivaccination"]
+  },
+  {
+    "baseWord": "public",
+    "question": "What adjective is formed by adding a prefix to the word 'public' to mean not for the public?",
+    "correct": ["antipublic"]
+  },
+  {
+    "baseWord": "mobile",
+    "question": "What adjective is formed by adding a prefix to the word 'mobile' to mean self-moving or self-operating?",
+    "correct": ["automobile"]
+  },
+  {
+    "baseWord": "matic",
+    "question": "What adjective is formed by adding a prefix to the word 'matic' to mean something that works automatically?",
+    "correct": ["automatic"]
+  },
+  {
+    "baseWord": "biography",
+    "question": "What noun is formed by adding a prefix to the word 'biography' to mean the story of one's own life?",
+    "correct": ["autobiography"]
+  },
+  {
+    "baseWord": "pilot",
+    "question": "What noun is formed by adding a prefix to the word 'pilot' to mean a self-operating system or device?",
+    "correct": ["autopilot"]
+  },
+  {
+    "baseWord": "maton",
+    "question": "What noun is formed by adding a prefix to the word 'maton' to mean a device that operates on its own?",
+    "correct": ["automaton"]
+  },
+  {
+    "baseWord": "graph",
+    "question": "What noun is formed by adding a prefix to the word 'graph' to mean a diagram of one's own writing?",
+    "correct": ["autograph"]
+  },
+  {
+    "baseWord": "completion",
+    "question": "What noun is formed by adding a prefix to the word 'completion' to mean completing automatically?",
+    "correct": ["autocompletion"]
+  },
+  {
+    "baseWord": "grade",
+    "question": "What verb is formed by adding a prefix to the word 'grade' to mean to lower in rank or quality?",
+    "correct": ["downgrade"]
+  },
+  {
+    "baseWord": "load",
+    "question": "What verb is formed by adding a prefix to the word 'load' to mean to reduce the load?",
+    "correct": ["download"]
+  },
+  {
+    "baseWord": "size",
+    "question": "What verb is formed by adding a prefix to the word 'size' to mean to reduce the size?",
+    "correct": ["downsize"]
+  },
+  {
+    "baseWord": "turn",
+    "question": "What verb is formed by adding a prefix to the word 'turn' to mean to move in a downward direction?",
+    "correct": ["downturn"]
+  },
+  {
+    "baseWord": "play",
+    "question": "What verb is formed by adding a prefix to the word 'play' to mean to play less intensely?",
+    "correct": ["downplay"]
+  },
+  {
+    "baseWord": "vote",
+    "question": "What verb is formed by adding a prefix to the word 'vote' to mean to vote against or reduce support?",
+    "correct": ["downvote"]
+  },
+  {
+    "baseWord": "time",
+    "question": "What verb is formed by adding a prefix to the word 'time' to mean to reduce the amount of time for something?",
+    "correct": ["downtime"]
+  },
+  {
+    "baseWord": "hill",
+    "question": "What noun is formed by adding a prefix to the word 'hill' to mean a downward slope?",
+    "correct": ["downhill"]
+  },
+  {
+    "baseWord": "grade",
+    "question": "What verb is formed by adding a prefix to the word 'grade' to mean to raise in rank or quality?",
+    "correct": ["upgrade"]
+  },
+  {
+    "baseWord": "date",
+    "question": "What verb is formed by adding a prefix to the word 'date' to mean to set a later date?",
+    "correct": ["update"]
+  },
+  {
+    "baseWord": "set",
+    "question": "What verb is formed by adding a prefix to the word 'set' to mean to increase or enhance?",
+    "correct": ["upset"]
+  },
+  {
+    "baseWord": "root",
+    "question": "What verb is formed by adding a prefix to the word 'root' to mean to establish or strengthen?",
+    "correct": ["uproot"]
+  },
+  {
+    "baseWord": "date",
+    "question": "What verb is formed by adding a prefix to the word 'date' to mean to adjust the schedule to a later time?",
+    "correct": ["update"]
+  },
+  {
+    "baseWord": "turn",
+    "question": "What verb is formed by adding a prefix to the word 'turn' to mean to rotate in an upward direction?",
+    "correct": ["upturn"]
+  },
+  {
+    "baseWord": "grade",
+    "question": "What verb is formed by adding a prefix to the word 'grade' to mean to raise or improve?",
+    "correct": ["upgrade"]
+  },
+  {
+    "baseWord": "beat",
+    "question": "What verb is formed by adding a prefix to the word 'beat' to mean to beat or strike harder or more forcefully?",
+    "correct": ["upbeat"]
+  },
+  {
+    "baseWord": "bring",
+    "question": "What verb is formed by adding a prefix to the word 'bring' to mean to bring something or someone to a higher position?",
+    "correct": ["upbring"]
+  },
+  {
+    "baseWord": "vote",
+    "question": "What verb is formed by adding a prefix to the word 'vote' to mean to increase support?",
+    "correct": ["upvote"]
+  },
+  {
+    "baseWord": "lift",
+    "question": "What verb is formed by adding a prefix to the word 'lift' to mean to raise something?",
+    "correct": ["uplift"]
+  },
+  {
+    "baseWord": "end",
+    "question": "What verb is formed by adding a prefix to the word 'end' to mean to end something in a more positive way?",
+    "correct": ["upend"]
+  },
+  {
+    "baseWord": "sell",
+    "question": "What verb is formed by adding a prefix to the word 'sell' to mean to sell more or better?",
+    "correct": ["upsell"]
+  },
+  {
+    "baseWord": "hold",
+    "question": "What verb is formed by adding a prefix to the word 'hold' to mean to hold something in an upward position?",
+    "correct": ["uphold"]
+  },
+  {
+    "baseWord": "rate",
+    "question": "What verb is formed by adding a prefix to the word 'rate' to mean to increase the evaluation or estimation?",
+    "correct": ["uprate"]
+  },
+  {
+    "baseWord": "market",
+    "question": "What adjective is formed by adding a prefix to the word 'market' to mean something that is targeted at a more affluent or high-end market?",
+    "correct": ["upmarket"]
+  },
+  {
+    "baseWord": "terrestrial",
+    "question": "What adjective is formed by adding a prefix to the word 'terrestrial' to mean beyond the Earth?",
+    "correct": ["extraterrestrial"]
+  },
+  {
+    "baseWord": "sensory",
+    "question": "What adjective is formed by adding a prefix to the word 'sensory' to mean beyond normal sensory perception?",
+    "correct": ["extrasensory"]
+  },
+  {
+    "baseWord": "musical",
+    "question": "What adjective is formed by adding a prefix to the word 'musical' to mean beyond typical musical performance?",
+    "correct": ["extramusical"]
+  },
+  {
+    "baseWord": "territorial",
+    "question": "What adjective is formed by adding a prefix to the word 'territorial' to mean beyond regular territory?",
+    "correct": ["extraterritorial"]
+  },
+  {
+    "baseWord": "ordinary",
+    "question": "What adjective is formed by adding a prefix to the word 'ordinary' to mean exceptional or beyond the usual?",
+    "correct": ["extraordinary"]
+  },
+  {
+    "baseWord": "personal",
+    "question": "What adjective is formed by adding a prefix to the word 'personal' to mean beyond the self?",
+    "correct": ["extrapersonal"]
+  },
+  {
+    "baseWord": "physical",
+    "question": "What adjective is formed by adding a prefix to the word 'physical' to mean beyond physical constraints?",
+    "correct": ["extraphysical"]
+  },
+  {
+    "baseWord": "position",
+    "question": "What noun is formed by adding a prefix to the word 'position' to mean a position beyond the usual?",
+    "correct": ["extraposition"]
+  },
+[
+  {
+    "baseWord": "estimate",
+    "question": "What verb is formed by adding a prefix to the word 'estimate' to mean to assess something as larger or more than it actually is?",
+    "correct": ["overestimate"]
+  },
+  {
+    "baseWord": "work",
+    "question": "What verb is formed by adding a prefix to the word 'work' to mean to work more than necessary or too much?",
+    "correct": ["overwork"]
+  },
+  {
+    "baseWord": "load",
+    "question": "What noun is formed by adding a prefix to the word 'load' to mean an excessive amount of something?",
+    "correct": ["overload"]
+  },
+  {
+    "baseWord": "eat",
+    "question": "What verb is formed by adding a prefix to the word 'eat' to mean to consume more food than necessary?",
+    "correct": ["overeat"]
+  },
+  {
+    "baseWord": "react",
+    "question": "What verb is formed by adding a prefix to the word 'react' to mean to respond excessively or in an exaggerated manner?",
+    "correct": ["overreact"]
+  },
+  {
+    "baseWord": "see",
+    "question": "What verb is formed by adding a prefix to the word 'see' to mean to look at something more than necessary or excessively?",
+    "correct": ["oversee"]
+  },
+  {
+    "baseWord": "confident",
+    "question": "What adjective is formed by adding a prefix to the word 'confident' to mean excessively confident or too sure of oneself?",
+    "correct": ["overconfident"]
+  },
+  {
+    "baseWord": "supply",
+    "question": "What noun is formed by adding a prefix to the word 'supply' to mean providing more than what is necessary?",
+    "correct": ["oversupply"]
+  },
+  {
+    "baseWord": "price",
+    "question": "What noun is formed by adding a prefix to the word 'price' to mean charging too much for something?",
+    "correct": ["overprice"]
+  },
+  {
+    "baseWord": "run",
+    "question": "What verb is formed by adding a prefix to the word 'run' to mean spreading over or occupy (a place) in large numbers?",
+    "correct": ["overrun"]
+  },
+  {
+    "baseWord": "compensate",
+    "question": "What verb is formed by adding a prefix to the word 'compensate' to mean compensating too much or excessively?",
+    "correct": ["overcompensate"]
+  },
+  {
+    "baseWord": "achieve",
+    "question": "What verb is formed by adding a prefix to the word 'achieve' to mean achieving more than necessary or to a higher degree?",
+    "correct": ["overachieve"]
+  },
+  {
+    "baseWord": "decorate",
+    "question": "What verb is formed by adding a prefix to the word 'decorate' to mean decorating too much or excessively?",
+    "correct": ["overdecorate"]
+  },
+  {
+    "baseWord": "time",
+    "question": "What noun is formed by adding a prefix to the word 'time' to mean working beyond regular hours?",
+    "correct": ["overtime"]
+  },
+  {
+    "baseWord": "active",
+    "question": "What adjective is formed by adding a prefix to the word 'active' to mean overly energetic or excited?",
+    "correct": ["hyperactive"]
+  },
+  {
+    "baseWord": "sensitive",
+    "question": "What adjective is formed by adding a prefix to the word 'sensitive' to mean excessively sensitive?",
+    "correct": ["hypersensitive"]
+  },
+  {
+    "baseWord": "market",
+    "question": "What noun is formed by adding a prefix to the word 'market' to mean an overly commercialized market?",
+    "correct": ["hypermarket"]
+  },
+  {
+    "baseWord": "bole",
+    "question": "What noun is formed by adding a prefix to the word 'bole' to mean an abnormally large or excessive tree trunk?",
+    "correct": ["hyperbole"]
+  },
+  {
+    "baseWord": "tension",
+    "question": "What noun is formed by adding a prefix to the word 'tension' to mean extreme or excessive tension?",
+    "correct": ["hypertension"]
+  },
+  {
+    "baseWord": "thermia",
+    "question": "What noun is formed by adding a prefix to the word 'thermia' to mean an abnormally high body temperature?",
+    "correct": ["hyperthermia"]
+  },
+  {
+    "baseWord": "ventilate",
+    "question": "What verb is formed by adding a prefix to the word 'ventilate' to mean to ventilate excessively or at a higher rate?",
+    "correct": ["hyperventilate"]
+  },
+  {
+    "baseWord": "focus",
+    "question": "What noun is formed by adding a prefix to the word 'focus' to mean an excessive or exaggerated concentration?",
+    "correct": ["hyperfocus"]
+  },
+  {
+    "baseWord": "inflation",
+    "question": "What noun is formed by adding a prefix to the word 'inflation' to mean excessive inflation beyond normal levels?",
+    "correct": ["hyperinflation"]
+  },
+  {
+    "baseWord": "activity",
+    "question": "What noun is formed by adding a prefix to the word 'activity' to mean extremely high levels of activity?",
+    "correct": ["hyperactivity"]
+  },
+
+];
+
+let currentWordIndex = 0;
+let score = 0;
+let correctAnswers = 0;
+
+async function showCelebration() {
+  const modal = document.getElementById('celebrationModal');
+  const pokemonId = Math.floor(Math.random() * 898) + 1;
+  const pokemonContainer = document.getElementById('pokemonImage');
+  
+  try {
+    const response = await fetch(`https://pokeapi.co/api/v2/pokemon/${pokemonId}`);
+    const data = await response.json();
+    const pokemonImage = document.createElement('img');
+    pokemonImage.src = data.sprites.other['official-artwork'].front_default;
+    pokemonImage.alt = `Pokemon ${data.name}`;
+    pokemonImage.width = 200;
+    pokemonImage.height = 200;
+    
+    pokemonContainer.innerHTML = '';
+    pokemonContainer.appendChild(pokemonImage);
+    modal.style.display = 'flex';
+  } catch (error) {
+    console.error('Error fetching Pokemon:', error);
+  }
+}
+
+function closeCelebration() {
+  const modal = document.getElementById('celebrationModal');
+  modal.style.display = 'none';
+}
+
+function displayWord() {
+  const wordDisplay = document.getElementById('word');
+  const questionDisplay = document.getElementById('question');
+  const answerInput = document.getElementById('answer');
+  
+  // Generate a random index instead of using currentWordIndex
+  currentWordIndex = Math.floor(Math.random() * wordFamilies.length);
+  const currentWord = wordFamilies[currentWordIndex];
+  
+  wordDisplay.textContent = currentWord.baseWord;
+  questionDisplay.textContent = currentWord.question;
+  answerInput.value = '';
+}
+
+function skipWord() {
+  const feedback = document.getElementById('feedback');
+  const currentWord = wordFamilies[currentWordIndex];
+  
+  feedback.textContent = `Skipped. The correct answer was '${currentWord.correct[0]}'`;
+  feedback.className = "feedback incorrect";
+  
+  setTimeout(() => {
+    // Generate a new random index instead of incrementing
+    currentWordIndex = Math.floor(Math.random() * wordFamilies.length);
+    feedback.textContent = "";
+    displayWord();
+  }, 2000);
+}
+
+function checkAnswer() {
+  const currentWord = wordFamilies[currentWordIndex];
+  const feedback = document.getElementById('feedback');
+  const scoreDisplay = document.getElementById('score');
+  const answerInput = document.getElementById('answer');
+  
+  const userAnswer = answerInput.value.trim().toLowerCase();
+  
+  if (currentWord.correct.includes(userAnswer)) {
+    score += 10;
+    correctAnswers++;
+    feedback.textContent = "Correct! Well done!";
+    feedback.className = "feedback correct";
+    
+    if (correctAnswers === 10) {
+      showCelebration();
+      correctAnswers = 0;
+    }
+  } else {
+    feedback.textContent = `Incorrect. The correct answer is '${currentWord.correct.join("' or '")}'`;
+    feedback.className = "feedback incorrect";
+  }
+  
+  scoreDisplay.textContent = score;
+  
+  setTimeout(() => {
+    // Generate a new random index instead of incrementing
+    currentWordIndex = Math.floor(Math.random() * wordFamilies.length);
+    feedback.textContent = "";
+    displayWord();
+  }, 2000);
+}
+
+function startNewChallenge() {
+  score = 0;
+  correctAnswers = 0;
+  const scoreDisplay = document.getElementById('score');
+  const feedback = document.getElementById('feedback');
+  
+  scoreDisplay.textContent = score;
+  feedback.textContent = "Starting a new challenge!";
+  feedback.className = "feedback";
+  
+  setTimeout(() => {
+    feedback.textContent = "";
+    displayWord();
+  }, 1500);
+}
+
+document.getElementById('answer').addEventListener('keypress', function(e) {
+  if (e.key === 'Enter') {
+    checkAnswer();
+  }
+});
+
+displayWord();
+</script>
+   <div class="footer">Author: Aaron Shi. Released in 2025.</div>
+</body></html>
